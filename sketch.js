@@ -11,12 +11,12 @@ class GameObject {
       "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww",
       "wwwwwwwwwwwwwwwwwwww        e           wwwwwwwwwwwwwd   d w",
       "wd    e        d                   e                w      w",//v
-      "w           wwwwwwww           w      w     d  d    w d  d w",
+      "w           wwwwwwww           w      w     d  d    w d    w",
       "w               e              w w  w w  e    w   dwww     w",
       "w   e                    e     w   w  w       www          w",
       "ww               w dw          w      w         w   e     dw",//v
       "wd              w w ww         w e    w                wwwww",
-      "www              w   w                                    dw",
+      "www              w   w                                     w",
       "wd                w   w   e                                w",//v
       "w     w     w       e           wwwww     e   wwwwwwwww  www",
       "w  e   w   w                                  wwwd        dw",
@@ -41,6 +41,7 @@ class GameObject {
     this.game_state = false; // Checking if the game has loaded
     this.instructions_state = false; // Checking if the instructions has loaded
     this.xCor = 0;
+    this.currFrameCount = 0;
   }
 
   // Initializes the game components from the tilemap.
@@ -71,6 +72,18 @@ class GameObject {
 
 var customDiamond = [];
 var customPlayer = [];
+var customBullet = [];
+
+function CustomBullet() {
+    push();
+      background(220, 220, 220, 0);
+      stroke(156, 164, 168);
+      strokeWeight(1);
+      fill(156, 164, 168);
+      arc(200, 400, 200, 750, PI, 0);
+      customBullet.push(get(0, 0, width, height));
+    pop();
+}
 
 function CustomPlayer(){
     push();
@@ -194,13 +207,13 @@ class Player {
         this.vectorOfMotion.set(cos(this.angleOfRotation - HALF_PI), sin(this.angleOfRotation - HALF_PI));
       
         if (keyIsDown(UP_ARROW) && this.y > 10){
-            deltaY += this.vectorOfMotion.y;
-            deltaX += this.vectorOfMotion.x;
+            deltaY += 2 * this.vectorOfMotion.y;
+            deltaX += 2 * this.vectorOfMotion.x;
 
         }
         if (keyIsDown(DOWN_ARROW) && this.y < height - 10){
-            deltaY -= this.vectorOfMotion.y;
-            deltaX -= this.vectorOfMotion.x;
+            deltaY -= 2 * this.vectorOfMotion.y;
+            deltaX -= 2 * this.vectorOfMotion.x;
         }
 
         if(this.check_collision_with_walls(deltaX, deltaY) == true){
@@ -317,6 +330,7 @@ class Enemy{
         this.dir = dir;
         this.deltaY = enemy_velocity;
         this.deltaX = enemy_velocity;
+        this.dead = false;
     }
 
     draw() {
@@ -440,6 +454,55 @@ class Enemy{
     }
 }
 
+class Bullet {
+  
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.angle = 0;
+    this.fire = 0;
+    this.vectorOfMotion = new p5.Vector(0, -1);
+  }
+  
+  draw() {
+    image(customBullet[0], this.x, this.y, 20, 20);
+  }
+  
+  check_damage_on_enemies() {
+    for (var i=0; i < gameObj.enemies.length; i++) {
+
+      var vertical_distance = abs(gameObj.enemies[i].y - (this.y));
+      var horizontal_distance = abs(gameObj.enemies[i].x - (this.x));
+
+      if(vertical_distance <= 16.67 && horizontal_distance <= 12.5) {
+          console.log('Bullet: Collision with enemies');
+          gameObj.enemies[i].dead = true;
+          this.fire = 0;
+          return true;
+        }
+      }  
+      return false;
+    }
+  
+  check_collision_with_walls() {
+      
+      for (var i=0; i < gameObj.walls.length; i++) {
+
+          var horizontal_distance = abs(gameObj.walls[i].x - (this.x));//dist(walls[i].x, 0, this.x + deltaX, 0);
+          var vertical_distance = abs(gameObj.walls[i].y - (this.y));
+          
+
+          if(horizontal_distance <= 15 && vertical_distance <= 15) {
+            console.log('Bullet: Collision with wall');
+            this.fire = 0;
+            return true;
+          }
+        }
+
+        return false;
+    }
+}
+
 class StartScreen{
     constructor(x, y){
         this.x = x;
@@ -499,9 +562,27 @@ function draw_enemies() {
     // }
 
     for (var i=0; i < gameObj.enemies.length; i++) {
-        gameObj.enemies[i].draw();
-        gameObj.enemies[i].move();
+        if(!gameObj.enemies[i].dead) {
+          gameObj.enemies[i].draw();
+          gameObj.enemies[i].move();
+        }
     }
+}
+
+function checkFire() {
+  if (keyArray[32] === 1) {
+    if (gameObj.currFrameCount < (frameCount - 10)) {
+      gameObj.currFrameCount = frameCount;
+      bullets[bulletIndex].fire = 1;
+      bulletsList[bulletIndex].x = gameObj.player.x + 10;
+      bulletsList[bulletIndex].y = gameObj.player.y + 10;
+      bulletsList[bulletIndex].angle = gameObj.player.angle;
+      bulletIndex++;
+      if (bulletIndex > 4) {
+        bulletIndex = 0;
+      }
+    }
+  }
 }
 
 function draw_diamonds() {
@@ -666,11 +747,14 @@ function draw() {
     {
 
         push();
-        if(gameObj.player.x > 200) {
+        // Player's position is initialized in the map to be at the right side
+        if(gameObj.player.x > width/2) {
+          // If player's position is in the right side, then shift immediately
           if (gameObj.player.x > 1000) {
             translate(-800,0);
           } else {
-            translate(200 - gameObj.player.x, 0);
+            // Shifts the left side of the map (origin) to the left by the change in distance from mid-section of the screen
+            translate(width/2 - gameObj.player.x, 0);
           }
         }
         background(0);
@@ -696,12 +780,13 @@ function draw() {
             
           gameObj.diamonds[i].check_theft_by_player();
         }
-
-        push();
-        textSize(25);
-        text('Score:' + gameObj.player.score, 300, 20);
         pop();
       
+        push();
+        textSize(25);
+        fill(255, 0, 0);
+        text('Score:' + gameObj.player.score, 300, 20);
+        pop();
         if (gameObj.player.score == 20) {
           gameObj.game_won = true;
           gameObj.game_over = true;
