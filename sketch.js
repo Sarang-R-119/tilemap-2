@@ -4,28 +4,70 @@
 // AUTHOR:  Sarang Vadi Rajeev
 // COURSE:  ECE 4525
 // DATE:    September 17, 2021
-var tilemap = [         //
-    "wwwwwwwwwwwwwwwwwwww",
-    "wwwwwwwwwwwwwd   d w",
-    "wd          w   v  w",//v
-    "w   d  d    w d  d w",
-    "w      w   dwww    w",
-    "w     www          w",
-    "ww  v  w          dw",//v
-    "wd             wwwww",
-    "www d     v       dw",
-    "wd        d        w",//v
-    "w     wwwwwwwww  www",
-    "w     wwwd        dw",
-    "w                  w",
-    "w     h      wwwwwww",
-    "w d          w d   w",//h
-    "ww wwwww     ww  p w",
-    "w d                w",
-    "w h              www",
-    "w d       wwwwwwwwww",//h
-    "wwwwwwwwwwwwwwwwwwww",
-];
+class GameObject {
+  constructor() {
+
+    this.tilemap = [         //
+      "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww",
+      "wwwwwwwwwwwwwwwwwwww        e           wwwwwwwwwwwwwd   d w",
+      "wd    e        d                   e                w      w",//v
+      "w           wwwwwwww           w      w     d  d    w d  d w",
+      "w               e              w w  w w  e    w   dwww     w",
+      "w   e                    e     w   w  w       www          w",
+      "ww               w dw          w      w         w   e     dw",//v
+      "wd              w w ww         w e    w                wwwww",
+      "www              w   w                                    dw",
+      "wd                w   w   e                                w",//v
+      "w     w     w       e           wwwww     e   wwwwwwwww  www",
+      "w  e   w   w                                  wwwd        dw",
+      "w       www   d                          w                 w",
+      "w       w w          w  w    e        w     w        wwwwwww",
+      "w d    w d w    e   w  d w            w  w  w        w     w",//h
+      "ww wwwww    w       w  w              w     w        ww  p w",
+      "w d                  e        e                            w",
+      "w e  wwwwwww e                             e             www",
+      "w d                     wwwwwwwwww                wwwwwwwwww",//h
+      "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww",
+    ];
+
+    this.walls = [];
+    // this.vertical_enemies = [];
+    // this.horizontal_enemies = [];
+    this.enemies = [];
+    this.diamonds = [];
+    this.player;
+    this.game_over = false; // Checking if the game is over
+    this.game_won = false; // Checking if the game is won
+    this.game_state = false; // Checking if the game has loaded
+    this.instructions_state = false; // Checking if the instructions has loaded
+    this.xCor = 0;
+  }
+
+  // Initializes the game components from the tilemap.
+  initTilemap() {
+    for (var i = 0; i< this.tilemap.length; i++) {
+        for (var j =0; j < this.tilemap[i].length; j++) {
+            switch (this.tilemap[i][j]) {
+                case 'w': 
+                    this.walls.push(new Wall(j*20, i*20));
+                    break;
+
+                case 'e': 
+                    this.enemies.push(new Enemy(j*20, i*20, 'chase'));
+                    break;
+
+                case 'p':
+                    this.player = new Player(j*20, i*20);
+                    break;
+
+                case 'd': 
+                    this.diamonds.push(new Diamond(j*20, i*20));
+                    break;
+            }
+        }
+    }
+  }
+}
 
 var customDiamond = [];
 var customPlayer = [];
@@ -130,10 +172,10 @@ class Player {
         // fill(169, 49, 49);
         // ellipse(this.x+10, this.y+10, 20, 20);
         push();
-        translate(this.x + 10, this.y + 10);
-        rotate(this.angleOfRotation);
-        translate(-this.x - 10, -this.y - 10);
-        image(customPlayer[0], this.x, this.y, 20, 20);
+          translate(this.x + 10, this.y + 10);
+          rotate(this.angleOfRotation);
+          translate(-this.x - 10, -this.y - 10);
+          image(customPlayer[0], this.x, this.y, 20, 20);
         pop();
 
     }
@@ -142,19 +184,23 @@ class Player {
         var deltaX = 0;
         var deltaY = 0;
 
-        if (keyIsPressed && (keyCode === RIGHT_ARROW) && this.x < width - 10){
-            deltaX = 5;
+        if (keyIsDown(RIGHT_ARROW)){
+          this.angleOfRotation += 5/360 * PI;
         }
-        if (keyIsPressed && (keyCode === LEFT_ARROW && this.x > 10)){
-            deltaX = -5;
+        if (keyIsDown(LEFT_ARROW) && this.x > 10){
+            this.angleOfRotation -= 5/360 * PI;
         }
-        // Checks if the up and down arrow keys are pressed and the player is moved consecutively.
-        if (keyIsPressed && (keyCode === UP_ARROW) && this.y > 10){
-            deltaY = -5;
+      
+        this.vectorOfMotion.set(cos(this.angleOfRotation - HALF_PI), sin(this.angleOfRotation - HALF_PI));
+      
+        if (keyIsDown(UP_ARROW) && this.y > 10){
+            deltaY += this.vectorOfMotion.y;
+            deltaX += this.vectorOfMotion.x;
 
         }
-        if (keyIsPressed && (keyCode === DOWN_ARROW) && this.y < height - 10){
-            deltaY = 5;
+        if (keyIsDown(DOWN_ARROW) && this.y < height - 10){
+            deltaY -= this.vectorOfMotion.y;
+            deltaX -= this.vectorOfMotion.x;
         }
 
         if(this.check_collision_with_walls(deltaX, deltaY) == true){
@@ -170,10 +216,10 @@ class Player {
 
     check_collision_with_walls(deltaX, deltaY) {
       
-      for (var i=0; i < walls.length; i++) {
+      for (var i=0; i < gameObj.walls.length; i++) {
 
-          var horizontal_distance = abs(walls[i].x - (this.x + deltaX));//dist(walls[i].x, 0, this.x + deltaX, 0);
-          var vertical_distance = abs(walls[i].y - (this.y + deltaY));
+          var horizontal_distance = abs(gameObj.walls[i].x - (this.x + deltaX));//dist(walls[i].x, 0, this.x + deltaX, 0);
+          var vertical_distance = abs(gameObj.walls[i].y - (this.y + deltaY));
           
 
           if(horizontal_distance <= 15 && vertical_distance <= 15) {
@@ -249,8 +295,8 @@ class Diamond {
   
     check_theft_by_player() {
 
-        var horizontal_distance = abs((player.x) - this.centerX);
-        var vertical_distance = abs((player.y) - this.centerY);
+        var horizontal_distance = abs((gameObj.player.x) - this.centerX);
+        var vertical_distance = abs((gameObj.player.y) - this.centerY);
 
 
         if(horizontal_distance <= 15 && vertical_distance <= 15) {
@@ -366,8 +412,8 @@ class Enemy{
       
         for (var i=0; i < walls.length; i++) {
 
-            var vertical_distance = abs(walls[i].y - (this.y + this.deltaY));
-            var horizontal_distance = abs(walls[i].x - (this.x + this.deltaX));
+            var vertical_distance = abs(gameObj.walls[i].y - (this.y + this.deltaY));
+            var horizontal_distance = abs(gameObj.walls[i].x - (this.x + this.deltaX));
 
             if(vertical_distance <= 16.67 && horizontal_distance <= 12.5) {
                 console.log('Enemies: Collision with wall');
@@ -379,8 +425,8 @@ class Enemy{
 
     check_collision_with_player() {
 
-        var vertical_distance = abs(player.y - (this.y + this.deltaY));
-        var horizontal_distance = abs(player.x - (this.x + this.deltaX));
+        var vertical_distance = abs(gameObj.player.y - (this.y + this.deltaY));
+        var horizontal_distance = abs(gameObj.player.x - (this.x + this.deltaX));
 
         if(vertical_distance <= 16.67 && horizontal_distance <= 12.5) {
             console.log('Enemies: Collision with player');
@@ -427,80 +473,46 @@ var button2_start_y = 200;
 var button2_end_x = 350;
 var button2_end_y = 350;
 
-var game_state = false; // Checking if the game has loaded
-var instructions_state = false; // Checking if the instructions has loaded
 var overBox_start = false; // Checking focus on button start
 var overBox_instructions = false; // Checking focus on button instructions
 var overBox_gameover = false;
-var game_over = false; // Checking if the game is over
-var game_won = false; // Checking if the game is won
 var total_score = 20; // Game score
 var enemy_velocity = 2;
 
 var start_screen;
-var walls = [];
-var vertical_enemies = [];
-var horizontal_enemies = [];
-var diamonds = [];
-var player;
+var gameObj;
+
 var playerIsMoving = false;
 
-// Initializes the game components from the tilemap.
-function initTilemap() {
-    for (var i = 0; i< tilemap.length; i++) {
-        for (var j =0; j < tilemap[i].length; j++) {
-            switch (tilemap[i][j]) {
-                case 'w': 
-                    walls.push(new Wall(j*20, i*20));
-                    break;
 
-                case 'v': 
-                    vertical_enemies.push(new Enemy(j*20, i*20, 'vertical'));
-                    break;
-
-                case 'h': 
-                    horizontal_enemies.push(new Enemy(j*20, i*20, 'horizontal'));
-                    break;
-
-                case 'p':
-                    player = new Player(j*20, i*20);
-                    break;
-
-                case 'd': 
-                    diamonds.push(new Diamond(j*20, i*20));
-                    break;
-            }
-        }
-    }
-}
 
 function draw_walls() {
-    for (var i=0; i < walls.length; i++) {
-        walls[i].draw();
+    for (var i=0; i < gameObj.walls.length; i++) {
+      gameObj.walls[i].draw();
     }
 }
 
 function draw_enemies() {
-    for (var i=0; i < vertical_enemies.length; i++) {
-        vertical_enemies[i].draw();
-        vertical_enemies[i].move();
-    }
+    // for (var i=0; i < vertical_enemies.length; i++) {
+    //     vertical_enemies[i].draw();
+    //     vertical_enemies[i].move();
+    // }
 
-    for (var i=0; i < horizontal_enemies.length; i++) {
-        horizontal_enemies[i].draw();
-        horizontal_enemies[i].move();
+    for (var i=0; i < gameObj.enemies.length; i++) {
+        gameObj.enemies[i].draw();
+        gameObj.enemies[i].move();
     }
 }
 
 function draw_diamonds() {
   var intact_diamonds = 0;
-    for (var i=0; i < diamonds.length; i++) {
-        if(!diamonds[i].stolen) {
-            diamonds[i].draw();
+    for (var i=0; i < gameObj.diamonds.length; i++) {
+        if(!gameObj.diamonds[i].stolen) {
+          gameObj.diamonds[i].draw();
             intact_diamonds++;
         }
     }
-  player.score = total_score - intact_diamonds;
+    gameObj.player.score = total_score - intact_diamonds;
 }
 
 // Checking if the mouse is pressed while the cursor is over the logo i.e. overBox is true.
@@ -508,21 +520,21 @@ function draw_diamonds() {
 function mousePressed() {
   
   if (overBox_start) {
-      game_state = true;
+    gameObj.game_state = true;
   } else {
-      game_state = false;
+    gameObj.game_state = false;
   }
 
   if (overBox_instructions) {
-      instructions_state = true;
+    gameObj.instructions_state = true;
   } else {
-      instructions_state = false;
+    gameObj.instructions_state = false;
   }
 
   if(overBox_gameover) {
-      game_over = true;
+    gameObj.game_over = true;
   } else {
-      game_over = false;
+    gameObj.game_over = false;
   }
 }
 
@@ -530,13 +542,16 @@ function setup() {
     createCanvas(400, 400);
     start_screen = new StartScreen(0,0);
     CustomDiamond();
-    initTilemap();
+    CustomPlayer();
+    gameObj = new GameObject();
+    gameObj.initTilemap();
+    // initTilemap();
 }
   
 function draw() {
     background(220);
 
-    if (!(game_state || instructions_state || game_over))
+    if (!(gameObj.game_state || gameObj.instructions_state || gameObj.game_over))
     {
         start_screen.draw();
 
@@ -564,7 +579,7 @@ function draw() {
             overBox_instructions = false;
         }
     }
-    else if(instructions_state)
+    else if(gameObj.instructions_state)
     {   
         rectMode(CORNER);
         push();
@@ -598,20 +613,21 @@ function draw() {
         }
         //exits to start_screen
     }
-    else if(game_over)
+    else if(gameObj.game_over)
     {
         // Reinitializing the game
-        walls = [];
-        vertical_enemies = [];
-        horizontal_enemies = [];
-        diamonds = [];
-        initTilemap();
+        gameObj.walls = [];
+        // gameObj.vertical_enemies = [];
+        // gameObj.horizontal_enemies = [];
+        gameObj.enemies = [];
+        gameObj.diamonds = [];
+        gameObj.initTilemap();
         overBox_start = false;
-        player.score = 0;
+        gameObj.player.score = 0;
       
         rectMode(CORNER);
       
-        if (!game_won){
+        if (!gameObj.game_won){
           push();
             fill(0);
             textSize(40);
@@ -646,36 +662,49 @@ function draw() {
         }
         //exits to start_screen
     }
-    else if (game_state)
+    else if (gameObj.game_state)
     {
+
+        push();
+        if(gameObj.player.x > 200) {
+          if (gameObj.player.x > 1000) {
+            translate(-800,0);
+          } else {
+            translate(200 - gameObj.player.x, 0);
+          }
+        }
         background(0);
         // Draws all the components in the game
         draw_walls();
         draw_enemies();
         draw_diamonds();
-        player.draw();
-        player.move();
-        for (var i=0; i < vertical_enemies.length; i++) {
-          vertical_enemies[i].check_collision_with_player();
+        gameObj.player.draw();
+        gameObj.player.move();
+        // for (var i=0; i < vertical_enemies.length; i++) {
+        //   vertical_enemies[i].check_collision_with_player();
+        // }
+
+        // for (var i=0; i < horizontal_enemies.length; i++) {
+        //     horizontal_enemies[i].check_collision_with_player();
+        // }
+
+        for (var i=0; i < gameObj.enemies.length; i++) {
+          gameObj.enemies[i].check_collision_with_player();
         }
 
-        for (var i=0; i < horizontal_enemies.length; i++) {
-            horizontal_enemies[i].check_collision_with_player();
-        }
-      
-        for (var i=0; i < diamonds.length; i++) {
+        for (var i=0; i < gameObj.diamonds.length; i++) {
             
-            diamonds[i].check_theft_by_player();
+          gameObj.diamonds[i].check_theft_by_player();
         }
 
         push();
         textSize(25);
-        text('Score:' + player.score, 300, 20);
+        text('Score:' + gameObj.player.score, 300, 20);
         pop();
       
-        if (player.score == 20) {
-          game_won = true;
-          game_over = true;
+        if (gameObj.player.score == 20) {
+          gameObj.game_won = true;
+          gameObj.game_over = true;
         }
     }
 }
