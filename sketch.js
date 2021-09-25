@@ -556,16 +556,30 @@ class StartScreen{
 
     draw() {
         push();
+          background(100, 135, 152);
+          
+          push();
+            fill(21, 53, 68);
+            stroke(0);
+            textSize(30);
+            text('Treasure Hunter :', this.x + 80, this.y + 35);
+            text('Haunted House', this.x + 85, this.y + 70)
+          pop();
+          push();
+            fill(255);
+            rect(this.x + 50, this.y + 90, 300, 100)
+            fill(0);
+            textSize(40);
+            text("Start", this.x + 150, this.y + 155);
+          pop();
+          push();
           fill(255);
-          rect(this.x + 50, this.y + 50, 300, 100)
-          fill(0);
-          textSize(40);
-          text("Start", this.x + 150, this.y + 115);
+            rect(this.x + 50, this.y + 240, 300, 100);
+      fill(0);
+            textSize(40);
+            text("Instructions", this.x + 100, this.y + 305);
+          pop();
         pop();
-
-        rect(this.x + 50, this.y + 200, 300, 100);
-        textSize(40);
-        text("Instructions", this.x + 100, this.y + 265);
     }
 }
 
@@ -759,17 +773,18 @@ function draw() {
         gameObj.player.score = 0;
       
         rectMode(CORNER);
-      
+        push();
+          background(100, 135, 152);
         if (!gameObj.game_won){
           push();
-            fill(0);
+            fill(21, 53, 68);
             textSize(40);
             text('Game Over!', width/2 - 100, height/2 - 45);
           pop(); 
         }
         else{
           push();
-            fill(0);
+            fill(21, 53, 68);
             textSize(40);
             text('Game Won!', width/2 - 100, height/2 - 45);
           pop(); 
@@ -781,6 +796,7 @@ function draw() {
           textSize(40);
           text('Return', 127.5, 337.5);
         pop();  
+      pop();
 
         if (mouseX > 115 &&
             mouseY > 285 &&
