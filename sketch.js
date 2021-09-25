@@ -36,6 +36,7 @@ class GameObject {
     this.enemies = [];
     this.diamonds = [];
     this.player;
+    this.bulletsList = [new Bullet(), new Bullet(), new Bullet()];
     this.game_over = false; // Checking if the game is over
     this.game_won = false; // Checking if the game is won
     this.game_state = false; // Checking if the game has loaded
@@ -328,6 +329,7 @@ class Enemy{
         this.x = x + 10/6;
         this.y = y + 10/6;
         this.dir = dir;
+        this.step = new p5.Vector(0, -1);
         this.deltaY = enemy_velocity;
         this.deltaX = enemy_velocity;
         this.dead = false;
@@ -421,10 +423,34 @@ class Enemy{
             this.x += this.deltaX;
         }
     }
+  
+    chase() {
+      
+      var newDeltaX = 0;
+      var newDeltaY = 0;
+      if (dist(this.x, this.y, gameObj.player.x, gameObj.player.y) < 120) {
+        
+        this.step.set(gameObj.player.x - this.x, gameObj.player.y - this.y);
+        
+        this.step.normalize();//print(this.step.heading());  // this shows the angle is different based on quadrant translation
+        this.angle = this.step.heading() + HALF_PI;
+        
+        newDeltaX = 0.5 * this.step.x;
+        newDeltaY = 0.5 * this.step.y;
+        
+        if(this.check_collision_with_walls() == true){
+              newDeltaX -= 5;
+              newDeltaY -= 5;
+        }
+        
+        this.x += newDeltaX;
+        this.y += newDeltaY;
+      }
+    }
 
     check_collision_with_walls() {
       
-        for (var i=0; i < walls.length; i++) {
+        for (var i=0; i < gameObj.walls.length; i++) {
 
             var vertical_distance = abs(gameObj.walls[i].y - (this.y + this.deltaY));
             var horizontal_distance = abs(gameObj.walls[i].x - (this.x + this.deltaX));
@@ -444,8 +470,8 @@ class Enemy{
 
         if(vertical_distance <= 16.67 && horizontal_distance <= 12.5) {
             console.log('Enemies: Collision with player');
-            game_over = true;
-            game_state = false;
+            gameObj.game_over = true;
+            gameObj.game_state = false;
             
             return true;
         }
@@ -456,16 +482,30 @@ class Enemy{
 
 class Bullet {
   
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
+  constructor() {
+    this.x = 0;
+    this.y = 0;
     this.angle = 0;
     this.fire = 0;
     this.vectorOfMotion = new p5.Vector(0, -1);
   }
   
   draw() {
-    image(customBullet[0], this.x, this.y, 20, 20);
+    push();
+    image(customBullet[0], this.x, this.y, 10, 10);
+    pop();
+  }
+  
+  shoot() {
+    
+    this.vectorOfMotion.set(cos(this.angle - HALF_PI), sin(this.angle - HALF_PI));// instead of angle, direct x & y
+    
+    this.y += 3 * this.vectorOfMotion.y;
+    this.x += 3 * this.vectorOfMotion.x;
+    
+    this.check_damage_on_enemies();
+    this.check_collision_with_walls(); // possible error
+    
   }
   
   check_damage_on_enemies() {
@@ -478,10 +518,13 @@ class Bullet {
           console.log('Bullet: Collision with enemies');
           gameObj.enemies[i].dead = true;
           this.fire = 0;
-          return true;
+
+          this.x = 2000;
+          this.y = 2000;
+          // return true;
         }
       }  
-      return false;
+      // return false;
     }
   
   check_collision_with_walls() {
@@ -495,11 +538,13 @@ class Bullet {
           if(horizontal_distance <= 15 && vertical_distance <= 15) {
             console.log('Bullet: Collision with wall');
             this.fire = 0;
-            return true;
+            this.x = 2000;
+            this.y = 2000;
+            // return true;
           }
         }
 
-        return false;
+        // return false;
     }
 }
 
@@ -541,9 +586,10 @@ var overBox_instructions = false; // Checking focus on button instructions
 var overBox_gameover = false;
 var total_score = 20; // Game score
 var enemy_velocity = 2;
-
+var keyArray = [];
 var start_screen;
 var gameObj;
+var bulletIndex = 0;
 
 var playerIsMoving = false;
 
@@ -564,21 +610,26 @@ function draw_enemies() {
     for (var i=0; i < gameObj.enemies.length; i++) {
         if(!gameObj.enemies[i].dead) {
           gameObj.enemies[i].draw();
-          gameObj.enemies[i].move();
+          // gameObj.enemies[i].move();
+          gameObj.enemies[i].chase();
         }
     }
 }
+
+function keyPressed() {keyArray[keyCode] = 1;}
+
+function keyReleased() {keyArray[keyCode] = 0;}
 
 function checkFire() {
   if (keyArray[32] === 1) {
     if (gameObj.currFrameCount < (frameCount - 10)) {
       gameObj.currFrameCount = frameCount;
-      bullets[bulletIndex].fire = 1;
-      bulletsList[bulletIndex].x = gameObj.player.x + 10;
-      bulletsList[bulletIndex].y = gameObj.player.y + 10;
-      bulletsList[bulletIndex].angle = gameObj.player.angle;
+      gameObj.bulletsList[bulletIndex].fire = 1;
+      gameObj.bulletsList[bulletIndex].x = gameObj.player.x + 10;
+      gameObj.bulletsList[bulletIndex].y = gameObj.player.y + 10;
+      gameObj.bulletsList[bulletIndex].angle = gameObj.player.angleOfRotation;
       bulletIndex++;
-      if (bulletIndex > 4) {
+      if (bulletIndex > 2) {
         bulletIndex = 0;
       }
     }
@@ -624,6 +675,7 @@ function setup() {
     start_screen = new StartScreen(0,0);
     CustomDiamond();
     CustomPlayer();
+    CustomBullet();
     gameObj = new GameObject();
     gameObj.initTilemap();
     // initTilemap();
@@ -773,12 +825,23 @@ function draw() {
         // }
 
         for (var i=0; i < gameObj.enemies.length; i++) {
-          gameObj.enemies[i].check_collision_with_player();
+          if(!gameObj.enemies[i].dead) {
+            gameObj.enemies[i].check_collision_with_player();
+          }
         }
 
         for (var i=0; i < gameObj.diamonds.length; i++) {
             
           gameObj.diamonds[i].check_theft_by_player();
+        }
+        
+        checkFire();
+      
+        for (var i=0; i < gameObj.bulletsList.length; i++) {
+            if(gameObj.bulletsList[i].fire == 1) {
+              gameObj.bulletsList[i].draw();
+              gameObj.bulletsList[i].shoot(); 
+            }
         }
         pop();
       
